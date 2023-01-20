@@ -1,0 +1,54 @@
+version: '3.9'
+services:
+  broker-service:
+    build:
+      context: ../broker-service
+      dockerfile: ../broker-service/build/Dockerfile
+    networks: 
+      - overlay
+    ports:
+      - "8080:8080"
+    restart: "no"
+    environment:
+      LOGGER_SERVICE_URI: 'logger-service:50051'
+  logger-service:
+    image: 'quay.io/ffo_rhel/logger-service:v0.0.1'
+    networks: 
+      - overlay
+    restart: "no"
+    environment:
+      MONGO_INITDB_DATABASE: logsDB
+      MONGO_INITDB_COLLECTION: logs.events
+      MONGO_INITDB_TTL: 30
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_SERVICE_URI: 'mongodb://mongodb-service:27017'
+  mongodb-service:
+    image: 'mongo:4.2.23-bionic'
+    ports:
+      - "27017:27017"
+    networks: 
+      - overlay
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: logsDB
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ./db-data/mongo/:/data/db
+  mongo-express:
+    image: 'mongo-express:0.54.0'
+    ports:
+      - "8081:8081"
+    networks: 
+      - overlay
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_SERVER: 'mongodb-service'
+      ME_CONFIG_MONGODB_ADMINUSERNAME: 'admin'
+      ME_CONFIG_MONGODB_ADMINPASSWORD: 'password'
+      ME_CONFIG_MONGODB_PORT: 27017
+    depends_on:
+      - mongodb-service
+networks:
+  overlay:
